@@ -1,3 +1,4 @@
+// Package config
 package config
 
 import (
@@ -9,6 +10,12 @@ import (
 	"github.com/joho/godotenv"
 )
 
+type Platforms struct {
+	FB bool
+	YT bool
+	TW bool
+}
+
 type Config struct {
 	FBKey string
 	YTKey string
@@ -18,7 +25,7 @@ type Config struct {
 	PORT  string
 }
 
-func LoadConfig() (*Config, error) {
+func LoadConfig(p *Platforms) (*Config, error) {
 	if err := godotenv.Load(); err != nil {
 		slog.Warn("error loading .env", "error", err)
 	}
@@ -31,24 +38,29 @@ func LoadConfig() (*Config, error) {
 		MRKey: os.Getenv("MR_STREAM_KEY"),
 		PORT:  os.Getenv("PORT"),
 	}
-	if err := cfg.validate(); err != nil {
+	if err := cfg.validate(p); err != nil {
 		return nil, err
 	}
 
 	return cfg, nil
 }
 
-func (c *Config) validate() error {
-	fields := []struct{ name, val string }{
-		{"FB_STREAM_KEY", c.FBKey},
-		{"YT_STREAM_KEY", c.YTKey},
-		{"TW_STREAM_KEY", c.TWKey},
-		{"MR_STREAM_KEY", c.MRKey},
-		{"PORT", c.PORT},
+func (c *Config) validate(p *Platforms) error {
+	fields := []struct {
+		name     string
+		val      string
+		required bool
+	}{
+		{"FB_STREAM_KEY", c.FBKey, p.FB},
+		{"YT_STREAM_KEY", c.YTKey, p.YT},
+		{"TW_STREAM_KEY", c.TWKey, p.TW},
+		{"MR_STREAM_KEY", c.MRKey, true},
+		{"PORT", c.PORT, true},
 	}
+
 	var missing []string
 	for _, f := range fields {
-		if f.val == "" {
+		if f.required && f.val == "" {
 			missing = append(missing, f.name)
 		}
 	}
